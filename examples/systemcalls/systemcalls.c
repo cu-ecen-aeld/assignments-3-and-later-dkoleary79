@@ -1,4 +1,9 @@
 #include "systemcalls.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <sys/wait.h>
+#include <fcntl.h>
 
 /**
  * @param cmd the command to execute with system()
@@ -35,6 +40,7 @@ bool do_system(const char *cmd)
 
 bool do_exec(int count, ...)
 {
+	bool retVal = true;
     va_list args;
     va_start(args, count);
     char * command[count+1];
@@ -43,9 +49,9 @@ bool do_exec(int count, ...)
     {
         command[i] = va_arg(args, char *);
     }
+    va_end(args);
+
     command[count] = NULL;
-    // this line is to avoid a compile warning before your implementation is complete
-    // and may be removed
 
 /*
  * TODO:
@@ -62,18 +68,21 @@ bool do_exec(int count, ...)
     {
     	if( childPid == 0 )
     	{//This is the child
-    		execv(command[0], &(command[1]) );
+    		exit( execv(command[0], command ) );
+    		//NOTE: execv only returns if there was an error
     	}
     	else
     	{//This is the parent
     		int childStatus = 0;
     		(void) wait( &childStatus );
+    		if( WEXITSTATUS(childStatus) != 0 )
+    			retVal = false;
     	}
     }
+    else
+    	retVal = false;
 
-    va_end(args);
-
-    return true;
+    return retVal;
 }
 
 /**
@@ -83,6 +92,7 @@ bool do_exec(int count, ...)
 */
 bool do_exec_redirect(const char *outputfile, int count, ...)
 {
+	bool retVal = true;
     va_list args;
     va_start(args, count);
     char * command[count+1];
@@ -91,10 +101,8 @@ bool do_exec_redirect(const char *outputfile, int count, ...)
     {
         command[i] = va_arg(args, char *);
     }
+    va_end(args);
     command[count] = NULL;
-    // this line is to avoid a compile warning before your implementation is complete
-    // and may be removed
-    command[count] = command[count];
 
 
 /*
@@ -105,7 +113,37 @@ bool do_exec_redirect(const char *outputfile, int count, ...)
  *
 */
 
-    va_end(args);
+    int fd = open(outputfile, O_WRONLY|O_TRUNC|O_CREAT, 0644);
+    if (fd < 0)
+    	retVal = false;
+    else
+    {
+		fflush( stdout );
+		int childPid = fork();
+		if( childPid != -1 )
+		{
+			if( childPid == 0 )
+			{//This is the child
+				if (dup2(fd, STDOUT_FILENO) < 0)
+					exit( -1 );
 
-    return true;
+				exit( execv(command[0], command) );
+				//NOTE: execv only returns if there was an error
+			}
+			else
+			{//This is the parent
+				int childStatus = 0;
+				(void) wait( &childStatus );
+	    		if( WEXITSTATUS(childStatus) != 0 )
+					retVal = false;
+			}
+		}
+		else
+		{
+			retVal = false;
+		}
+		close(fd);
+    }
+
+    return retVal;
 }
