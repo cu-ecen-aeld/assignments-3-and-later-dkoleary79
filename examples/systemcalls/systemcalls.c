@@ -16,8 +16,7 @@ bool do_system(const char *cmd)
  *   and return a boolean true if the system() call completed with success
  *   or false() if it returned a failure
 */
-
-    return true;
+	return ( system( cmd ) == 0 );
 }
 
 /**
@@ -47,7 +46,6 @@ bool do_exec(int count, ...)
     command[count] = NULL;
     // this line is to avoid a compile warning before your implementation is complete
     // and may be removed
-    command[count] = command[count];
 
 /*
  * TODO:
@@ -58,6 +56,20 @@ bool do_exec(int count, ...)
  *   as second argument to the execv() command.
  *
 */
+    fflush( stdout );
+    int childPid = fork();
+    if( childPid != -1 )
+    {
+    	if( childPid == 0 )
+    	{//This is the child
+    		execv(command[0], &(command[1]) );
+    	}
+    	else
+    	{//This is the parent
+    		int childStatus = 0;
+    		(void) wait( &childStatus );
+    	}
+    }
 
     va_end(args);
 
