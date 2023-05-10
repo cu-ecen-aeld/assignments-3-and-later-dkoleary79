@@ -78,13 +78,16 @@ int main( int argc, char*argv[] )
 		}
 	}
 
-	if( runInDaemonMode )
+	if( retVal == 0 )
 	{
-		pid_t childPid = fork();
-		if( childPid != 0 )
+		if( runInDaemonMode )
 		{
-			printf("Running in deamon mode\r\n");
-			return 0;
+			pid_t childPid = fork();
+			if( childPid != 0 )
+			{
+				printf("Running in deamon mode\r\n");
+				return 0;
+			}
 		}
 	}
 
